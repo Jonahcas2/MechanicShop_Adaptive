@@ -14,7 +14,7 @@ db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 # Create Customer table
-class Customer(Base):
+class Customers(Base):
     __tablename__ = 'customers'
 
     id: Mapped[int] = mapped_column(primary_key=True)
