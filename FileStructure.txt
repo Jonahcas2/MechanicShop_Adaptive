@@ -1,0 +1,13 @@
+
+/mechanicshop_adaptive
+├── /application
+│   ├── __init__.py - create_app() lives here
+│   ├── extensions.py
+│   ├── /blueprints
+│		│		├──/[Class]
+│		│				├──__init__.py  - Initializt User Blueprint
+│		│				├── routes.py  - Create User Controllers/routes
+│		│				└── userSchemas.py
+│   └── models.py
+├── app.py
+└── config.py

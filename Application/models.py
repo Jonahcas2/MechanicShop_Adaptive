@@ -3,16 +3,12 @@ from sqlalchemy import ForeignKey
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:0ff3ns1v3S3cur17y@localhost:3306/mechanic_shop'
-
 # Create a base class for the modules
 class Base(DeclarativeBase):
     pass
 
 # Instantiate the SQLAlchemy db
 db = SQLAlchemy(model_class=Base)
-db.init_app(app)
 
 # Create Customer table
 class Customers(Base):
@@ -63,10 +59,3 @@ class Mechanics(Base):
 
     # Relationship: One mechanic can work on many service tickets
     service_mechanics: Mapped[list["Service_Mechanics"]] = relationship("Service_Mechanics", back_populates="mechanics")
-
-# Create the table
-with app.app_context():
-    db.create_all()
-
-if __name__ == '__main__':
-    app.run(debug=True)
