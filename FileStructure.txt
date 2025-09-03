@@ -7,7 +7,7 @@
 │		│		├──/[Class]
 │		│				├──__init__.py  - Initializt User Blueprint
 │		│				├── routes.py  - Create User Controllers/routes
-│		│				└── userSchemas.py
+│		│				└── schemas.py
 │   └── models.py
 ├── app.py
 └── config.py
