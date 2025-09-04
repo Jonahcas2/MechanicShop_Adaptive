@@ -24,15 +24,15 @@ def create_customer():
     except ValidationError as e:
         return jsonify(e.messages), 400
     
-    query = select(Customers).where(Customers.email == customer_data['email']) # Checking the db for a customer with this email
+    query = select(Customers).where(Customers.email == customer_data.email) # Checking the db for a customer with this email
     existing_customer = db.session.execute(query).scalars().all()
     if existing_customer:
         return jsonify({"error": "Email already associated with an account"}), 400
     
-    new_customer = Customers(**customer_data)
-    db.session.add(new_customer)
+    # new_customer = Customers(**customer_data)
+    db.session.add(customer_data)
     db.session.commit()
-    return customer_schema.jsonify(new_customer), 201
+    return customer_schema.jsonify(customer_data), 201
 
 # PUT /api/v1/customers/<id> - Update an existing customer
 @customers_bp.route('/<int:customer_id>', methods=['PUT'])
