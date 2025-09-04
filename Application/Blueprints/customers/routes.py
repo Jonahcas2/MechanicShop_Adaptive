@@ -17,9 +17,22 @@ def get_customer(customer_id):
     pass
 
 # POST /api/v1/customers - Create a new customer
-@customers_bp.route('', methods=['POST'])
+@customers_bp.route('/customers', methods=['POST'])
 def create_customer():
-    pass
+    try:
+        customer_data = customer_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+    
+    query = select(Customers).where(Customers.email == customer_data['email']) # Checking the db for a customer with this email
+    existing_customer = db.session.execute(query).scalars().all()
+    if existing_customer:
+        return jsonify({"error": "Email already associated with an account"}), 400
+    
+    new_customer = Customers(**customer_data)
+    db.session.add(new_customer)
+    db.session.commit()
+    return customer_schema.jsonify(new_customer), 201
 
 # PUT /api/v1/customers/<id> - Update an existing customer
 @customers_bp.route('/<int:customer_id>', methods=['PUT'])
