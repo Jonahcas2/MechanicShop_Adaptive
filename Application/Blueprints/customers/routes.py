@@ -4,10 +4,10 @@ from marshmallow import ValidationError
 from sqlalchemy import select
 from Application.models import Customers, Service_Tickets, db
 
-customers_bp = Blueprint('customers', __name__)
+customers_bp = Blueprint('customers', __name__, url_prefix='/api/v1/customers')
 
 # GET /api/v1/customers - Get all customers with optional filtering
-@customers_bp.route('/', methods=['GET'])
+@customers_bp.route('', methods=['GET'])
 def get_customers():
     pass
     
@@ -22,10 +22,12 @@ def create_customer():
     pass
 
 # PUT /api/v1/customers/<id> - Update an existing customer
+@customers_bp.route('/<int:customer_id>', methods=['PUT'])
 def update_customer(customer_id):
     pass
 
 # DELETE /api/v1/customers/<id> - Delete a customer
+@customers_bp.route('/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
     pass
 

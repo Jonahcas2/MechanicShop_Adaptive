@@ -32,6 +32,9 @@ class Service_Tickets(Base):
     service_desc: Mapped[str] = mapped_column(db.String(255), nullable=False)
     customer_id: Mapped[int] = mapped_column(nullable=False)
 
+    # ForeignKey Constraint
+    customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'), nullable=False)
+
     # Relationships
     customer: Mapped["Customers"] = relationship("Customers", back_populates="service_tickets")
     service_mechanics: Mapped[list["Service_Mechanics"]] = relationship("Service_Mechanics", back_populates="ticket")
@@ -42,6 +45,10 @@ class Service_Mechanics(Base):
 
     ticket_id: Mapped[int] = mapped_column(primary_key=True)
     mechanic_id: Mapped[int] = mapped_column(primary_key=True)
+
+    # ForeignKey Constraints
+    ticket_id: Mapped[int] = mapped_column(ForeignKey('service_tickets.id'), primary_key=True)
+    mechanic_id: Mapped[int] = mapped_column(ForeignKey('mechanics.id'), primary_key=True)
 
     # Relationships
     ticket: Mapped["Service_Tickets"] = relationship("Service_Tickets", back_populates="service_mechanics")

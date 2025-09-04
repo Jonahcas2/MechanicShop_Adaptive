@@ -1,6 +1,7 @@
 from flask import Flask
 from .extensions import ma
 from .models import db
+from .Blueprints.customers import customers_bp
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -11,6 +12,6 @@ def create_app(config_name):
     db.init_app(app)
 
     # Register blueprints
-
+    app.register_blueprint(customers_bp, url_prefix='/api/v1/customers')
 
     return app
