@@ -17,7 +17,7 @@ def get_customer(customer_id):
     pass
 
 # POST /api/v1/customers - Create a new customer
-@customers_bp.route('/customers', methods=['POST'])
+@customers_bp.route('', methods=['POST'])
 def create_customer():
     try:
         customer_data = customer_schema.load(request.json)

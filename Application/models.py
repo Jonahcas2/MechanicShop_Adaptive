@@ -30,7 +30,6 @@ class Service_Tickets(Base):
     VIN: Mapped[str] = mapped_column(db.String(360), nullable=False, unique=True)
     service_date: Mapped[str] = mapped_column(db.String(360), nullable=False)
     service_desc: Mapped[str] = mapped_column(db.String(255), nullable=False)
-    customer_id: Mapped[int] = mapped_column(nullable=False)
 
     # ForeignKey Constraint
     customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'), nullable=False)
