@@ -12,6 +12,6 @@ def create_app(config_name):
     db.init_app(app)
 
     # Register blueprints
-    app.register_blueprint(customers_bp, url_prefix='/api/v1/customers')
+    app.register_blueprint(customers_bp)
 
     return app
