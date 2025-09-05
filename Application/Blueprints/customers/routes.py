@@ -6,10 +6,13 @@ from Application.models import Customers, Service_Tickets, db
 
 customers_bp = Blueprint('customers', __name__, url_prefix='/api/v1/customers')
 
-# GET /api/v1/customers - Get all customers with optional filtering
+# GET /api/v1/customers - Get all customers 
 @customers_bp.route('', methods=['GET'])
 def get_customers():
-    pass
+    query = select(Customers)
+    customers = db.session.execute(query).scalars().all()
+
+    return customers_schema.jsonify(customers)
     
 # GET /api/v1/customers/<id> - Get a specific customer by ID
 @customers_bp.route('/<int:customer_id>', methods=['GET'])
