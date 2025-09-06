@@ -20,7 +20,7 @@ def get_customer(customer_id):
     customer = db.session.get(Customers, customer_id)
 
     if customer:
-        return customer_schema.jsonify(customer_schema), 200
+        return customer_schema.jsonify(customer), 200
     return jsonify({"error": "Customer not found."}), 404
     pass
 
@@ -47,23 +47,27 @@ def create_customer():
 def update_customer(customer_id):
     customer = db.session.get(Customers, customer_id)
     if not customer:
-        return jsonify({"error": "Customer not found"})/ 404
+        return jsonify({"error": "Customer not found"}), 404
     
     try:
-        customer_data = customer_schema.load(request.json)
+        updated_customer = customer_schema.load(request.json, instance=customer)
     except ValidationError as e:
         return jsonify(e.messages), 400
-    
-    for key, value in customer_data.items():
-        setattr(customer, key, value)
-    
+
     db.session.commit()
-    return customer_schema.jsonify(customer), 200
+    return customer_schema.jsonify(update_customer), 200
 
 # DELETE /customers/<id> - Delete a customer
 @customers_bp.route('/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
-    pass
+    customer = db.session.get(Customers, customer_id)
+
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+    
+    db.session.delete(customer)
+    db.session.commit()
+    return jsonify({"message": f'Customer id: {customer_id}, successfully deleted'}), 200
 
 # GET /customers/<id>/service-tickets - Get customer's service tickets
 @customers_bp.route('/<int:customer_id>/service-tickets', methods=['GET'])
