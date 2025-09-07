@@ -68,8 +68,3 @@ def delete_customer(customer_id):
     db.session.delete(customer)
     db.session.commit()
     return jsonify({"message": f'Customer id: {customer_id}, successfully deleted'}), 200
-
-# GET /customers/<id>/service-tickets - Get customer's service tickets
-@customers_bp.route('/<int:customer_id>/service-tickets', methods=['GET'])
-def get_customer_service_tickets(customer_id):
-    pass

@@ -32,11 +32,23 @@ def getAll_mechanics():
     return mechanics_schema.jsonify(mechanics)
 
 # PUT'/<int:id>' - Updates a specific mechanic
-@mechanics_bp.route('/<int:customer_id>', methods=['PUT'])
-def getMechanic():
-    pass
+@mechanics_bp.route('/<int:mechanic_id>', methods=['PUT'])
+def getMechanic(mechanic_id):
+    mechanic = db.session.get(Mechanics, mechanic_id)
+
+    if mechanic:
+        return mechanic_schema,jsonify(mechanic), 200
+    return jsonify({"error": "Mechanic not found."}), 404
 
 # DELETE'/<int:id>' - Deletes a specific mechanic based on ID passed
-@mechanics_bp.route('/<int:customer_id>', methods=['DELETE'])
-def delete_mechanic():
+@mechanics_bp.route('/<int:mechanic_id>', methods=['DELETE'])
+def delete_mechanic(mechanic_id):
+    mechanic = db.session.get(Mechanics, mechanic_id)
+
+    if not mechanic:
+        return jsonify({"error": "Mechanic not found"}), 404
+    
+    db.session.delete(mechanic)
+    db.session.commit()
+    return jsonify({"message": f'Mechanic id: {mechanic_id}, successfully deleted'}), 200
     pass

@@ -2,6 +2,7 @@ from flask import Flask
 from .extensions import ma
 from .models import db
 from .Blueprints.customers import customers_bp
+from .Blueprints.mechanics import mechanics_bp
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -13,5 +14,6 @@ def create_app(config_name):
 
     # Register blueprints
     app.register_blueprint(customers_bp)
+    app.register_blueprint(mechanics_bp)
 
     return app
