@@ -2,6 +2,7 @@ from Application.extensions import ma
 from Application.models import Service_Tickets
 
 class Service_TicketSchema(ma.SQLAlchemyAutoSchema):
+    customer_id = ma.Integer(required=True)
     class Meta:
         model = Service_Tickets
         load_instance = True
