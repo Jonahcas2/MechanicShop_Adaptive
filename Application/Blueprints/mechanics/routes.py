@@ -3,11 +3,14 @@ from flask import request, jsonify, Blueprint
 from marshmallow import ValidationError
 from sqlalchemy import select
 from Application.models import db, Mechanics
+from Application.extensions import limiter, cache
+from Application.utils.cache_utils import cache_response
 
 mechanics_bp = Blueprint('mechanics', __name__, url_prefix='/mechanics')
 
 # POST'/' - Create a new Mechanic
 @mechanics_bp.route('', methods=['POST'])
+@limiter.limit("5 per minute")
 def create_mechanic():
     try:
         mechanic_data = mechanic_schema.load(request.json)
@@ -21,10 +24,15 @@ def create_mechanic():
     
     db.session.add(mechanic_data)
     db.session.commit()
+
+    cache.delete_memoized(getAll_mechanics)
+
     return mechanic_schema.jsonify(mechanic_data), 201
 
 # GET'/' - Retrieve all Mechanics
 @mechanics_bp.route('', methods=['GET'])
+@limiter.limit("10 per minute")
+@cache_response(timeout=300)
 def getAll_mechanics():
     query = select(Mechanics)
     mechanics = db.session.execute(query).scalars().all()
@@ -33,6 +41,7 @@ def getAll_mechanics():
 
 # PUT'/<int:id>' - Updates a specific mechanic
 @mechanics_bp.route('/<int:mechanic_id>', methods=['PUT'])
+@limiter.limit("5 per minute")
 def update_mechanic(mechanic_id):
     mechanic = db.session.get(Mechanics, mechanic_id)
     if not mechanic:
@@ -44,11 +53,15 @@ def update_mechanic(mechanic_id):
         return jsonify(e.messages), 400
 
     db.session.commit()
+
+    cache.delete_memoized(getAll_mechanics)
+
     return jsonify(mechanic_schema.dump(updated_mechanic)), 200
 
 
 # DELETE'/<int:id>' - Deletes a specific mechanic based on ID passed
 @mechanics_bp.route('/<int:mechanic_id>', methods=['DELETE'])
+@limiter.limit("3 per minute")
 def delete_mechanic(mechanic_id):
     mechanic = db.session.get(Mechanics, mechanic_id)
 
@@ -57,5 +70,11 @@ def delete_mechanic(mechanic_id):
     
     db.session.delete(mechanic)
     db.session.commit()
+
+    cache.delete_memoized(getAll_mechanics)
     return jsonify({"message": f'Mechanic id: {mechanic_id}, successfully deleted'}), 200
-    pass
+
+
+@mechanics_bp.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify(error="Rate limit exceeded", message=str(e.description)), 429

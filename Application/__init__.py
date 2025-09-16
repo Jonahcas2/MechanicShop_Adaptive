@@ -1,5 +1,5 @@
 from flask import Flask
-from .extensions import ma
+from .extensions import ma, limiter, cache
 from .models import db
 from .Blueprints.customers import customers_bp
 from .Blueprints.mechanics import mechanics_bp
@@ -12,6 +12,8 @@ def create_app(config_name):
     # Initialize extensions
     ma.init_app(app)
     db.init_app(app)
+    limiter.init_app(app)
+    cache.init_app(app)
 
     # Register blueprints
     app.register_blueprint(customers_bp)
