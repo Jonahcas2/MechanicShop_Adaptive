@@ -47,6 +47,8 @@ class Service_Tickets(Base):
     # Relationships
     customer: Mapped["Customers"] = relationship("Customers", back_populates="service_tickets")
     service_mechanics: Mapped[list["Service_Mechanics"]] = relationship("Service_Mechanics", back_populates="ticket")
+        # Relationsip to junction table
+    service_inventory: Mapped[list["Service_Inventory"]] = relationship("Service_Inventory", back_populates="ticket")
 
 # Service Mechanics table (Junction table for many-to-many relationship)
 class Service_Mechanics(Base):
@@ -75,3 +77,22 @@ class Mechanics(Base):
 
     # Relationship: One mechanic can work on many service tickets
     service_mechanics: Mapped[list["Service_Mechanics"]] = relationship("Service_Mechanics", back_populates="mechanics")
+
+# Inventory table
+class Inventory(Base):
+    __tablename__ = 'inventory'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    price: Mapped[float] = mapped_column(nullable=False)
+
+    # Relationship to junction table
+    service_inventory: Mapped[list["Service_Inventory"]] = relationship("Service_Inventory", back_populates="inventory")
+
+# Junction table for Service_Tickets <--> Inventory (Many-to-Many)
+class Service_Inventory(Base):
+    __tablename__ = 'service_inventory'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    price: Mapped[float] = mapped_column(nullable=False)
