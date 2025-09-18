@@ -1,10 +1,13 @@
-from .schemas import customer_schema, customers_schema
+from .schemas import customer_schema, customers_schema, login_schema
 from flask import request, jsonify, Blueprint
 from marshmallow import ValidationError
 from sqlalchemy import select
 from Application.models import Customers, Service_Tickets, db
 from Application.extensions import limiter, cache
 from Application.utils.cache_utils import cache_response
+from Application.utils.token_utils import encode_token, token_required
+from Application.Blueprints.service_tickets.schemas import tickets_schema
+from werkzeug.security import generate_password_hash
 
 customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 
@@ -13,10 +16,34 @@ customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 @limiter.limit("10 per minute")
 @cache_response(timeout=300)
 def get_customers():
-    query = select(Customers)
-    customers = db.session.execute(query).scalars().all()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 5, type=int)
 
-    return customers_schema.jsonify(customers)
+    # Limit per_page to prevent excessive data retrieval
+    per_page = min(per_page, 100)
+
+    # SQLAlchemy's paginate method
+    paginated_customers = db.paginate(
+        select(Customers), page=page,
+        per_page=per_page, error_out=False
+    )
+
+    # Format response with pagination metadata
+    response_data = {
+        'customers': customers_schema.dump(paginated_customers.items),
+        'pagination': {
+            'page': paginated_customers.page,
+            'pages': paginated_customers.pages,
+            'per_page': paginated_customers.per_page,
+            'total': paginated_customers.total,
+            'has_next': paginated_customers.has_next,
+            'has_prev': paginated_customers.has_prev,
+            'next_num': paginated_customers.next_num if paginated_customers.has_next else None,
+            'prev_num': paginated_customers.prev_num if paginated_customers.has_prev else None
+        }
+    }
+
+    return jsonify(response_data), 200
     
 # GET /customers/<id> - Get a specific customer by ID
 @customers_bp.route('/<int:customer_id>', methods=['GET'])
@@ -43,6 +70,10 @@ def create_customer():
     existing_customer = db.session.execute(query).scalars().all()
     if existing_customer:
         return jsonify({"error": "Email already associated with an account"}), 400
+    
+    # Hash password before saving
+    if 'password' in request.json:
+        customer_data.set_password(request.json['password'])
     
     # new_customer = Customers(**customer_data)
     db.session.add(customer_data)
@@ -88,6 +119,42 @@ def delete_customer(customer_id):
     cache.delete_memoized(get_customer, customer_id)
 
     return jsonify({"message": f'Customer id: {customer_id}, successfully deleted'}), 200
+
+# POST /customers/login - Customer login
+@customers_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def login():
+    try:
+        login_data = login_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+    
+    # Find customer by email
+    query = select(Customers).where(Customers.email == login_data['email'])
+    customer = db.session.execute(query).scalars().first()
+
+    if not customer or not customer.check_password(login_data['password']):
+        return jsonify({"error": "Invalid email or password"}), 401
+    
+    token = encode_token(customer.id)
+
+    return jsonify({
+        "message": "Login successful", 
+        "token": token, 
+        "customer_id": customer.id
+    }), 200
+
+# GET /customers/my-tickets - Get all service tickets for the logged-in customer (requires token)
+@customers_bp.route('/my-tickets', methods=['GET'])
+@token_required
+@limiter.limit("10 per minute")
+def get_my_tickets(customer_id):
+    # Query service tickets for this customer
+    query = select(Service_Tickets).where(Service_Tickets.customer_id == customer_id)
+    tickets = db.session.execute(query).scalars().all()
+
+    return tickets_schema.jsonify(tickets), 200
+
 
 @customers_bp.errorhandler(429)
 def ratelimit_handler(e):

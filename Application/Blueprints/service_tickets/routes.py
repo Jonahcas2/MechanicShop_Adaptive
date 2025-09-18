@@ -105,6 +105,64 @@ def getAll_tickets():
 
     return tickets_schema.jsonify(tickets)
 
+# PUT '/<int:ticket_id>/edit' - Add and remove mechanics from service ticket
+@tickets_bp.route('<int:ticket_id>/edit', methods=['PUT'])
+@limiter.limit("5 per minute")
+def edit_ticket_mechanics(ticket_id):
+    ticket = db.session.get(Service_Tickets, ticket_id)
+    if not ticket:
+        return jsonify({"error": "Service Ticket not found"}), 404
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    remove_ids = data.get('remove_ids', [])
+    add_ids = data.get('add_ids', [])
+
+    # Remove mechanics
+    if remove_ids:
+        for mechanic_id in remove_ids:
+            # Find the relationship
+            service_mechanic = db.session.execute(
+                select(Service_Mechanics).where(
+                    Service_Mechanics.ticket_id == ticket_id,
+                    Service_Mechanics.mechanic_id == mechanic_id,
+                )
+            ).scalars().first()
+
+            if service_mechanic:
+                db.session.delete(service_mechanic)
+    
+    # Add mechanics
+    if add_ids:
+        for mechanic_id in add_ids:
+            # Verify mechanic exists
+            mechanic = db.session.getZ(Mechanics, mechanic_id)
+            if not mechanic:
+                return jsonify({"error": f"Mechanic with id {mechanic_id} not found"}), 404
+            
+            # Check if relationship already exists
+            existing_relationship = db.session.execute(
+                select(Service_Mechanics).where(
+                    Service_Mechanics.ticket_id == ticket_id,
+                    Service_Mechanics.mechanic_id == mechanic_id
+                )
+            ).scalars().first()
+
+            if not existing_relationship:
+                service_mechanic = Service_Mechanics(ticket_id=ticket_id, mechanic_id=mechanic_id)
+                db.session.add(service_mechanic)
+    
+    db.session.commit()
+    cache.delete_memoized(getAll_tickets)
+
+    return jsonify({
+        "message": f"Ticket {ticket_id} mechanics updated successfully",
+        "removed_mechanics": remove_ids,
+        "added_mechanics": add_ids
+    }), 200
+
 
 # Error handling
 @tickets_bp.errorhandler(429)

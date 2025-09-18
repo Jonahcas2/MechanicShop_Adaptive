@@ -1,8 +1,9 @@
 from .schemas import mechanic_schema, mechanics_schema
 from flask import request, jsonify, Blueprint
 from marshmallow import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, func
 from Application.models import db, Mechanics
+from Application.models import Service_Mechanics
 from Application.extensions import limiter, cache
 from Application.utils.cache_utils import cache_response
 
@@ -73,6 +74,31 @@ def delete_mechanic(mechanic_id):
 
     cache.delete_memoized(getAll_mechanics)
     return jsonify({"message": f'Mechanic id: {mechanic_id}, successfully deleted'}), 200
+
+# GET '/ranking' - Get mechanics order by most tickets worked on
+@mechanics_bp.route('/ranking', methods=['GET'])
+@limiter.limit("10 per minute")
+@cache_response(timeout=600)
+def get_mechanic_ranking():
+    # Query mechanics with ticket count, ordered by ticket count descending
+    query = (
+        select(
+            Mechanics, func.count(Service_Mechanics.mechanic_id).label('ticket_count')
+        )
+        .outerjoin(Service_Mechanics, Mechanics.id == Service_Mechanics.mechanic_id)
+        .group_by(Mechanics.id)
+        .order_by(func.count(Service_Mechanics.mechanic_id).desc())
+    )
+
+    results = db.session.execute(query).all()
+
+    # Format the response to include ticket count
+    ranking_data = []
+    for mechanic, ticket_count in results:
+        mechanic_data = mechanic_schema.dump(mechanic)
+        mechanic_data['tickets_worked_on'] = ticket_count
+        ranking_data.append(mechanic_data)
+    return jsonify(ranking_data), 200
 
 
 @mechanics_bp.errorhandler(429)

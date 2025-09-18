@@ -2,6 +2,7 @@ from flask import Flask
 from sqlalchemy import ForeignKey
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Create a base class for the modules
 class Base(DeclarativeBase):
@@ -18,9 +19,18 @@ class Customers(Base):
     name: Mapped[str] = mapped_column(db.String(255), nullable=False)
     email: Mapped[str] = mapped_column(db.String(360), nullable=False, unique=True)
     phone: Mapped[str] = mapped_column(db.String(360), nullable=False, unique=True)
+    password: Mapped[str] = mapped_column(db.String(255), nullable=False)
 
     # Relationship: One customer can have many service tickets
     service_tickets: Mapped[list["Service_Tickets"]] = relationship("Service_Tickets", back_populates="customer")
+
+    def set_password(self, password):
+        """Set the customer's password (hashing can be added here)"""
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Check if provided password matched the hash"""
+        return check_password_hash(self.password, password)
 
 # Service Tickets table
 class Service_Tickets(Base):
