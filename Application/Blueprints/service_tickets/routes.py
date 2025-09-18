@@ -2,7 +2,7 @@ from .schemas import ticket_schema, tickets_schema
 from flask import request, jsonify, Blueprint
 from marshmallow import ValidationError
 from sqlalchemy import select
-from Application.models import Service_Tickets, Mechanics, Service_Mechanics, db
+from Application.models import Service_Tickets, Mechanics, Service_Mechanics, Inventory, Service_Inventory, db
 from Application.extensions import limiter, cache
 from Application.utils.cache_utils import cache_response
 
@@ -161,6 +161,60 @@ def edit_ticket_mechanics(ticket_id):
         "message": f"Ticket {ticket_id} mechanics updated successfully",
         "removed_mechanics": remove_ids,
         "added_mechanics": add_ids
+    }), 200
+
+# POST '/<int:ticket_id>/add-part' - Add a part to the service ticket
+@tickets_bp.route('/int:ticket_id>/add-part', methods=['POST'])
+@limiter.limit("10 per minute")
+def add_part_to_ticket(ticket_id):
+    ticket = db.session.get(Service_Tickets, ticket_id)
+    if not ticket:
+        return jsonify({"error": "Service Ticket not found"}), 404
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "inventory_id is required"}), 400
+    
+    inventory_id = db.session.get(Inventory, inventory_id)
+    quantity = data.get('quantity', 1)
+
+    if not inventory_id:
+        return jsonify({"error": "inventory_id is required"}), 400
+    
+    inventory_item = db.session.get(Inventory, inventory_id)
+    if not inventory_item:
+        return jsonify({"error": "Inventory item not found"})
+    
+    # Check if this part is already associated with the ticket
+    existing_relationship = db.session.execute(
+        select(Service_Inventory).where(
+            Service_Inventory.ticket_id == ticket_id,
+            Service_Inventory.inventory_id == inventory_id
+        )
+    ).scalars().first()
+
+    if existing_relationship:
+        # Update quantity if relationship exists
+        existing_relationship.quantity += quantity
+        message = f"Updated quantity for part '{inventory_item.name}' on ticket {ticket_id}"
+    else:
+        # Create new relationship
+        service_inventory = Service_Inventory(
+            ticket_id=ticket_id,
+            inventory_id=inventory_id,
+            quantity=quantity
+        )
+        db.session.add(service_inventory)
+        message = f"Added part '{inventory_item.name}' to ticket {ticket_id}"
+
+    db.session.commit()
+    cache.delete_memoized(getAll_tickets)
+
+    return jsonify({
+        "message": message,
+        "part_name": inventory_item.name,
+        "quantity": quantity,
+        "part_price": inventory_item.price
     }), 200
 
 
