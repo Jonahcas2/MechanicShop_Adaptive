@@ -1,4 +1,4 @@
-from .schemas import customer_schema, customers_schema, login_schema
+from Application.Blueprints.customers.schemas import customer_schema, customers_schema, login_schema
 from flask import request, jsonify, Blueprint
 from marshmallow import ValidationError
 from sqlalchemy import select
@@ -85,7 +85,7 @@ def create_customer():
 
 # PUT /customers/<id> - Update an existing customer
 @customers_bp.route('/<int:customer_id>', methods=['PUT'])
-@limiter
+@limiter.limit("10 per minute")
 def update_customer(customer_id):
     customer = db.session.get(Customers, customer_id)
     if not customer:

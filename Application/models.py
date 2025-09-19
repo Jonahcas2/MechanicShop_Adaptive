@@ -102,4 +102,4 @@ class Service_Inventory(Base):
 
     # Relationships
     ticket: Mapped["Service_Tickets"] = relationship("Service_Tickets", back_populates="service_inventory")
-    inventory = Mapped["Inventory"] = relationship("Inventory", back_populates="service_inventory")
+    inventory: Mapped["Inventory"] = relationship("Inventory", back_populates="service_inventory")
