@@ -35,7 +35,7 @@ def get_all_inventory():
     return inventories_schema.jsonify(inventory_items), 200
 
 # GET '/<int:id>' - Get a specific inventory item
-@inventory_bp.route('/<int:id>', methods=['GET'])
+@inventory_bp.route('/<int:inventory_id>', methods=['GET'])
 @limiter.limit("20 per minute")
 @cache_response(timeout=600)
 def get_inventory_item(inventory_id):

@@ -22,7 +22,7 @@ def encode_token(customer_id):
 def decode_token(token):
     """Decode & validate JWT token"""
     try:
-        payload = jwt.decode(payload, SECRET_KEY, algorithm='HS256')
+        payload = jwt.decode(token, SECRET_KEY, algorithm=['HS256'])
         return payload
     except JWTError:
         return None
@@ -35,7 +35,7 @@ def token_required(f):
         auth_header = request.headers.get('Authorization')
 
         if not auth_header:
-            return jsonify({'error': 'Authorization header is missing'}), 402
+            return jsonify({'error': 'Authorization header is missing'}), 401
         
         # Check if it's a Bearer token
         try:

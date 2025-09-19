@@ -93,6 +93,13 @@ class Inventory(Base):
 class Service_Inventory(Base):
     __tablename__ = 'service_inventory'
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(db.String(255), nullable=False)
-    price: Mapped[float] = mapped_column(nullable=False)
+    # Composite Primary Key
+    ticket_id: Mapped[int] = mapped_column(ForeignKey('service_tickets.id'), primary_key=True)
+    inventory_id: Mapped[int] = mapped_column(ForeignKey('inventory.id'), primary_key=True)
+
+    # Add quantity field
+    quantity: Mapped[int] = mapped_column(default=1)
+
+    # Relationships
+    ticket: Mapped["Service_Tickets"] = relationship("Service_Tickets", back_populates="service_inventory")
+    inventory = Mapped["Inventory"] = relationship("Inventory", back_populates="service_inventory")

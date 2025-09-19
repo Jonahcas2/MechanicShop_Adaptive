@@ -106,7 +106,7 @@ def getAll_tickets():
     return tickets_schema.jsonify(tickets)
 
 # PUT '/<int:ticket_id>/edit' - Add and remove mechanics from service ticket
-@tickets_bp.route('<int:ticket_id>/edit', methods=['PUT'])
+@tickets_bp.route('/<int:ticket_id>/edit', methods=['PUT'])
 @limiter.limit("5 per minute")
 def edit_ticket_mechanics(ticket_id):
     ticket = db.session.get(Service_Tickets, ticket_id)
@@ -138,7 +138,7 @@ def edit_ticket_mechanics(ticket_id):
     if add_ids:
         for mechanic_id in add_ids:
             # Verify mechanic exists
-            mechanic = db.session.getZ(Mechanics, mechanic_id)
+            mechanic = db.session.get(Mechanics, mechanic_id)
             if not mechanic:
                 return jsonify({"error": f"Mechanic with id {mechanic_id} not found"}), 404
             
@@ -164,7 +164,7 @@ def edit_ticket_mechanics(ticket_id):
     }), 200
 
 # POST '/<int:ticket_id>/add-part' - Add a part to the service ticket
-@tickets_bp.route('/int:ticket_id>/add-part', methods=['POST'])
+@tickets_bp.route('/<int:ticket_id>/add-part', methods=['POST'])
 @limiter.limit("10 per minute")
 def add_part_to_ticket(ticket_id):
     ticket = db.session.get(Service_Tickets, ticket_id)
@@ -173,17 +173,18 @@ def add_part_to_ticket(ticket_id):
     
     data = request.get_json()
     if not data:
-        return jsonify({"error": "inventory_id is required"}), 400
+        return jsonify({"error": "No data provided"}), 400
     
-    inventory_id = db.session.get(Inventory, inventory_id)
+    inventory_id = data.get('inventory_id')  # Fix this line
     quantity = data.get('quantity', 1)
 
     if not inventory_id:
         return jsonify({"error": "inventory_id is required"}), 400
     
+    # Verify inventory item exists
     inventory_item = db.session.get(Inventory, inventory_id)
     if not inventory_item:
-        return jsonify({"error": "Inventory item not found"})
+        return jsonify({"error": "Inventory item not found"}), 404
     
     # Check if this part is already associated with the ticket
     existing_relationship = db.session.execute(
