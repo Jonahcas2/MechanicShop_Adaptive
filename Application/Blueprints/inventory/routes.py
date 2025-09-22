@@ -38,6 +38,7 @@ def get_all_inventory():
 @inventory_bp.route('/<int:inventory_id>', methods=['GET'])
 @limiter.limit("20 per minute")
 @cache_response(timeout=600)
+@cache.memoize(timeout=60)
 def get_inventory_item(inventory_id):
     inventory_item = db.session.get(Inventory, inventory_id)
 

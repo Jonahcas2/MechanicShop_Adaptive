@@ -49,6 +49,7 @@ def get_customers():
 @customers_bp.route('/<int:customer_id>', methods=['GET'])
 @limiter.limit("20 per minute")
 @cache_response(timeout=600)
+@cache.memoize(timeout=60)
 def get_customer(customer_id):
     customer = db.session.get(Customers, customer_id)
 
@@ -124,6 +125,14 @@ def delete_customer(customer_id):
 @customers_bp.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():
+    # Check if request has JSON data
+    if not request.is_json:
+        return jsonify({"error": "Missing JSON in request"}), 400
+    
+    # Check if JSON body exists and is not empty
+    if request.json is None:
+        return jsonify({"error": "Empty request body"}), 400
+
     try:
         login_data = login_schema.load(request.json)
     except ValidationError as e:

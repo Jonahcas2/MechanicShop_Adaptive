@@ -10,7 +10,7 @@ class InventorySchema(ma.SQLAlchemyAutoSchema):
 
 class ServiceInventorySchema(ma.SQLAlchemyAutoSchema):
     inventory_id = ma.Integer(required=True)
-    quantity = ma.Integer(missing=1)
+    quantity = ma.Integer()
 
     class Meta:
         model = Service_Inventory

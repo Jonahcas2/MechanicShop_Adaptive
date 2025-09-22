@@ -22,7 +22,7 @@ def encode_token(customer_id):
 def decode_token(token):
     """Decode & validate JWT token"""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithm=['HS256'])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         return payload
     except JWTError:
         return None
