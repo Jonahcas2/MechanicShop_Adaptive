@@ -3,6 +3,9 @@ class DevConfig:
     DEBUG = True
 
 class TestConfig:
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///testing.db'
+    DEBUG = True
+    CACHE_TYPE = 'SimpleCache'
     pass
 
 class ProdConfig:
