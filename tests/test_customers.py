@@ -45,6 +45,18 @@ class TestCustomer(unittest.TestCase):
         except Exception as e:
             print(f"Teardown warning: {e}")
 
+        # Get all customers test
+    def test_get_all_customers(self):
+        response = self.client.get('/customers')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json, dict)
+        customers = response.json.get('customers')
+        self.assertIsInstance(customers, list)
+        self.assertGreaterEqual(len(customers), 1)
+        self.assertEqual(customers[0]['email'], 'test@email.com')
+        self.assertNotIn('password', customers[0])
+
+    
     # Customer creation test
     def test_create_customer(self):
         customer_payload= {
@@ -78,29 +90,6 @@ class TestCustomer(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json['email'],['Missing data for required field.'])
     
-    # Customer Login test
-    def test_login_customer(self):
-        credentials = {
-            "email": "test@email.com",
-            "password": "testpass"
-        }
-
-        response = self.client.post('/customers/login', json=credentials)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json['status'], 'success')
-        return response.json['token']
-    
-    # Invalid Customer Login Test
-    def test_invalid_login(self):
-        credentials = {
-            "email": "bad_email@email.com",
-            "password": "bad_passwd"
-        }
-
-        response = self.client.post('/customers/login', json=credentials)
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json['message'], 'Invalid email or password!')
-    
     # Token authentication update
     def test_update_customer(self):
         update_payload ={
@@ -131,15 +120,26 @@ class TestCustomer(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json['error'], 'Invalid or expired token')
 
+    # Customer Login test
+    def test_login_customer(self):
+        credentials = {
+            "email": "test@email.com",
+            "password": "testpass"
+        }
 
-    # Get all customers test
-    def test_get_all_customers(self):
-        response = self.client.get('/customers')
+        response = self.client.post('/customers/login', json=credentials)
         self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.json, dict)
-        customers = response.json.get('customers')
-        self.assertIsInstance(customers, list)
-        self.assertGreaterEqual(len(customers), 1)
-        self.assertEqual(customers[0]['email'], 'test@email.com')
-        self.assertNotIn('password', customers[0])
+        self.assertEqual(response.json['status'], 'success')
+        return response.json['token']
+    
+    # Invalid Customer Login Test
+    def test_invalid_login(self):
+        credentials = {
+            "email": "bad_email@email.com",
+            "password": "bad_passwd"
+        }
+
+        response = self.client.post('/customers/login', json=credentials)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json['message'], 'Invalid email or password!')
         
