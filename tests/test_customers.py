@@ -130,3 +130,16 @@ class TestCustomer(unittest.TestCase):
         response = self.client.put('/customers', json=update_payload, headers=headers)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json['error'], 'Invalid or expired token')
+
+
+    # Get all customers test
+    def test_get_all_customers(self):
+        response = self.client.get('/customers')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json, dict)
+        customers = response.json.get('customers')
+        self.assertIsInstance(customers, list)
+        self.assertGreaterEqual(len(customers), 1)
+        self.assertEqual(customers[0]['email'], 'test@email.com')
+        self.assertNotIn('password', customers[0])
+        
