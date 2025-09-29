@@ -157,9 +157,6 @@ class TestCustomer(unittest.TestCase):
         response = self.client.post('/customers/login', json=credentials)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json['message'], 'Invalid email or password!')
-    
-    # Get service tickets for logged-in customer test
-    
 
     # Delete customer test
     def test_delete_customer(self):
