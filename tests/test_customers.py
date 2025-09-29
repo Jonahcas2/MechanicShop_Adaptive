@@ -116,3 +116,17 @@ class TestCustomer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['name'], 'Peter')
         self.assertEqual(response.json['email'], 'test@email.com')
+    
+    # Invalid token update
+    def test_invalid_customer_update(self):
+        update_payload = {
+            "name": "Peter",
+            "phone": "",
+            "email": "",
+            "password": ""
+        }
+
+        headers = {'Authorization': "Bearer " + "BAD_TOKEN"}
+        response = self.client.put('/customers', json=update_payload, headers=headers)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json['error'], 'Invalid or expired token')
