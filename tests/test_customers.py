@@ -1,5 +1,5 @@
 from Application import create_app
-from Application.models import  db, Customers
+from Application.models import  db, Customers, Service_Tickets
 from datetime import datetime
 from Application.utils.token_utils import encode_token
 import unittest, json, sys, os
@@ -45,7 +45,7 @@ class TestCustomer(unittest.TestCase):
         except Exception as e:
             print(f"Teardown warning: {e}")
 
-        # Get all customers test
+    # Get all customers test
     def test_get_all_customers(self):
         response = self.client.get('/customers')
         self.assertEqual(response.status_code, 200)
@@ -55,8 +55,23 @@ class TestCustomer(unittest.TestCase):
         self.assertGreaterEqual(len(customers), 1)
         self.assertEqual(customers[0]['email'], 'test@email.com')
         self.assertNotIn('password', customers[0])
-
     
+    # Get specific customer test
+    def test_get_customer_by_id(self):
+        # First, get all customers to find a valid ID
+        all_response = self.client.get('/customers')
+        self.assertEqual(all_response.status_code, 200)
+        customers = all_response.json.get('customers')
+        self.assertGreaterEqual(len(customers), 1)
+        customer_id = customers[0]['id']
+
+        # Now, get the specific customer by ID
+        response = self.client.get(f'/customers/{customer_id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['id'], customer_id)
+        self.assertEqual(response.json['email'], 'test@email.com')
+        self.assertNotIn('password', response.json)
+
     # Customer creation test
     def test_create_customer(self):
         customer_payload= {
@@ -142,4 +157,26 @@ class TestCustomer(unittest.TestCase):
         response = self.client.post('/customers/login', json=credentials)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json['message'], 'Invalid email or password!')
+    
+    # Get service tickets for logged-in customer test
+    
+
+    # Delete customer test
+    def test_delete_customer(self):
+        # First, get all customers to find a valid ID
+        all_response = self.client.get('/customers')
+        self.assertEqual(all_response.status_code, 200)
+        customers = all_response.json.get('customers')
+        self.assertGreaterEqual(len(customers), 1)
+        customer_id = customers[0]['id']
+
+        # Now, delete the specific customer by ID
+        response = self.client.delete(f'/customers/{customer_id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('successfully deleted', response.json['message'])
+        # Verify customer is actually deleted
+        follow_up = self.client.get(f'/customers/{customer_id}')
+        self.assertEqual(follow_up.status_code, 404)
+        self.assertIn('Customer not found', follow_up.json['error'])
+    
         
