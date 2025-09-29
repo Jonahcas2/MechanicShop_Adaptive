@@ -91,9 +91,14 @@ def update_customer(customer_id):
     customer = db.session.get(Customers, customer_id)
     if not customer:
         return jsonify({"error": "Customer not found"}), 404
-    
+    # Filter out empty-string values so we don't overwrite existing values with ""
+    update_payload = {}
+    if request.json:
+        update_payload = {k: v for k, v in request.json.items() if v is not None and v != ''}
+
     try:
-        updated_customer = customer_schema.load(request.json, instance=customer)
+        # Use partial=True to allow updates that don't include all required fields
+        updated_customer = customer_schema.load(update_payload, instance=customer, partial=True)
     except ValidationError as e:
         return jsonify(e.messages), 400
 
@@ -102,7 +107,8 @@ def update_customer(customer_id):
     cache.delete_memoized(get_customers)
     cache.delete_memoized(get_customer, customer_id)
 
-    return customer_schema.jsonify(update_customer), 200
+    # Return the updated customer instance
+    return customer_schema.jsonify(updated_customer), 200
 
 # DELETE /customers/<id> - Delete a customer
 @customers_bp.route('/<int:customer_id>', methods=['DELETE'])
@@ -143,13 +149,15 @@ def login():
     customer = db.session.execute(query).scalars().first()
 
     if not customer or not customer.check_password(login_data['password']):
-        return jsonify({"error": "Invalid email or password"}), 401
-    
+        # Return a message key to match tests
+        return jsonify({"message": "Invalid email or password!"}), 401
+
     token = encode_token(customer.id)
 
     return jsonify({
-        "message": "Login successful", 
-        "token": token, 
+        "status": "success",
+        "message": "Login successful",
+        "token": token,
         "customer_id": customer.id
     }), 200
 
@@ -163,6 +171,34 @@ def get_my_tickets(customer_id):
     tickets = db.session.execute(query).scalars().all()
 
     return tickets_schema.jsonify(tickets), 200
+
+
+# PUT /customers - Update currently authenticated customer (uses token)
+@customers_bp.route('', methods=['PUT'])
+@token_required
+@limiter.limit("10 per minute")
+def update_current_customer(customer_id):
+    customer = db.session.get(Customers, customer_id)
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+
+    # Filter out empty-string values from the incoming payload
+    update_payload = {}
+    if request.json:
+        update_payload = {k: v for k, v in request.json.items() if v is not None and v != ''}
+
+    try:
+        # Allow partial updates (don't require all fields)
+        updated_customer = customer_schema.load(update_payload, instance=customer, partial=True)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+
+    db.session.commit()
+
+    cache.delete_memoized(get_customers)
+    cache.delete_memoized(get_customer, customer_id)
+
+    return customer_schema.jsonify(updated_customer), 200
 
 
 @customers_bp.errorhandler(429)
