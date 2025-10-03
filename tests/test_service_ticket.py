@@ -27,10 +27,62 @@ class TestServiceTickets(unittest.TestCase):
         }
 
         self.test_ticket2 ={
-            "VIN": "",
+            "VIN": "C3T2V1N2",
             "service_date": "2023-10-06",
             "service_desc": "Test ticket 2"
         }
 
         # Persist the test tickets so the tests can succeed
-        
+        # Create and persist a customer to satisfy the NOT NULL customer_id FK
+        self.test_customer = Customers(name="Ticket Owner", email="ticket@owner.com", phone="999-888-7777", password="placeholder")
+        self.test_customer.set_password("placeholder")
+        db.session.add(self.test_customer)
+        db.session.commit()
+
+        test_ST1 = Service_Tickets(
+            VIN=self.test_ticket1['VIN'],
+            service_date=self.test_ticket1['service_date'],
+            service_desc=self.test_ticket1['service_desc'],
+            customer_id=self.test_customer.id
+        )
+
+        test_ST2 = Service_Tickets(
+            VIN=self.test_ticket2['VIN'],
+            service_date=self.test_ticket2['service_date'],
+            service_desc=self.test_ticket2['service_desc'],
+            customer_id=self.test_customer.id
+        )
+
+        db.session.add_all([test_ST1, test_ST2])
+        db.session.commit()
+
+    def tearDown(self):
+        """Clean up after each test"""
+        try:
+            db.session.close()
+            db.drop_all()
+            self.app_context.pop()
+        except Exception as e:
+            print(f"Teardown warning: {e}")
+
+    # Create a new test service ticket
+    def test_create_ticket(self):
+        payload = {
+            "VIN": "B7E9G6H0Q",
+            "service_date": "2024-12-12",
+            "service_desc": "Test ticket (from method)",
+            "customer_id": self.test_customer.id
+        }
+        # Post to the correct service tickets endpoint
+        response = self.client.post('/service-tickets', data=json.dumps(payload),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+
+        # Parse JSON response
+        response_data = json.loads(response.data)
+        self.assertEqual(response_data['VIN'], "B7E9G6H0Q")
+        self.assertEqual(response_data['service_date'], "2024-12-12")
+        self.assertEqual(response_data['service_desc'], "Test ticket (from method)")
+
+    # Test to add a relationship between a service ticket and a mechanic
+    
