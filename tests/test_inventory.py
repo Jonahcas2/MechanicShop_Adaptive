@@ -106,7 +106,58 @@ class TestInventory(unittest.TestCase):
     
     # Update inventory item test
     def test_update_invItem(self):
+        """Test update an inventory item"""
+        # First, get an existing inventory item
+        all_response = self.client.get('/inventory')
+        self.assertEqual(all_response.status_code, 200)
+        all_items = all_response.json
+        self.assertGreaterEqual(len(all_items), 1)
+        item_id = all_items[0]['id']
+        
+        # Define update payload
         update_payload = {
-            
+            "name": "Premium Oil Change",
+            "price": 39.99
         }
-        pass
+
+        # Send PUT request to update the item
+        response = self.client.put(f'/inventory/{item_id}', 
+                                   data = json.dumps(update_payload),
+                                   content_type = 'application/json')
+        
+        # Assert response
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['name'], "Premium Oil Change")
+        self.assertAlmostEqual(float(response.json['price']), 39.99, places=2)
+
+        # Verify the update by fetching the item again
+        get_resp = self.client.get(f'/inventory/{item_id}')
+        self.assertEqual(get_resp.status_code, 200)
+        self.assertEqual(get_resp.json['name'], "Premium Oil Change")
+        self.assertAlmostEqual(float(get_resp.json['price']), 39.99, places=2)
+    
+    # Delete inventory test
+    def test_delete_item(self):
+        """Test deleting a specific inventory item -created for this test"""
+        # 1 - Create an item specifically for deletion
+        deletion_payload = {
+            "name": "Item to Delete",
+            "price": 15.99
+        }
+        create_response = self.client.post('/inventory', json=deletion_payload)
+        self.assertEqual(create_response.status_code, 201)
+        item_id = create_response.json['id']
+
+        # 2 - Verify the item exists
+        get_resp = self.client.get(f'/inventory/{item_id}')
+        self.assertEqual(get_resp.status_code, 200)
+        self.assertEqual(get_resp.json['name'], "Item to Delete")
+
+        # 3 - Delete the item
+        delete_response = self.client.delete(f'/inventory/{item_id}')
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertIn('successfully deleted', delete_response.json['message'])
+
+        # 4 - Confirm deletion
+        verify_response = self.client.get(f'/inventory/{item_id}')
+        self.assertEqual(verify_response.status_code, 404)

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from Application.models import Inventory, db
 from Application.extensions import limiter, cache
 from Application.utils.cache_utils import cache_response
+from Application.utils.cache_utils import cache_key_generator
 
 inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
@@ -77,6 +78,20 @@ def delete_inventory(inventory_id):
     db.session.delete(inventory_item)
     db.session.commit()
 
+    # Remove cached responses created by our custom cache_response decorator.
+    # cache_response stores cached data under a key equal to the request path
+    # (and query/hash for query params). Delete both the list and the item keys.
+    try:
+        # Delete the exact cache key used for this item (generated from the request)
+        item_cache_key = cache_key_generator()
+        cache.delete(item_cache_key)
+        # Also delete the list cache key (no view args)
+        cache.delete('/inventory')
+    except Exception:
+        # best-effort: continue even if cache backend doesn't support delete
+        pass
+
+    # Also attempt to clear any memoized entries (if used elsewhere)
     cache.delete_memoized(get_all_inventory)
     cache.delete_memoized(get_inventory_item, inventory_id)
 
