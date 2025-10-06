@@ -1,5 +1,5 @@
 from Application import create_app
-from Application.models import  db, Mechanics, Customers, Service_Mechanics, Service_Tickets
+from Application.models import  db, Mechanics, Customers, Service_Mechanics, Service_Tickets, Inventory, Service_Inventory
 from datetime import datetime
 from Application.utils.token_utils import encode_token
 import unittest, json, sys, os
@@ -122,10 +122,135 @@ class TestServiceTickets(unittest.TestCase):
         self.assertEqual(resp2.status_code, 400)
 
     # Test retrieve all service tickets
-    def get_all_tickets(self):
+    def test_get_all_tickets(self):
         response = self.client.get('/service-tickets')
         self.assertEqual(response.status_code, 200)
         tickets = response.json
         self.assertIsInstance(tickets, list)
         self.assertGreaterEqual(len(tickets), 1)
         self.assertEqual(tickets[0]['VIN'], "A8E7W8U2")
+
+    # Test to add, then remove a mechanic from a service ticket
+    def test_add_remove_mechanic(self):
+        # Create two test mechanics
+        mech1 = Mechanics(name="Edit Mech 1", email="editm1@test.com", phone="700-700-7000", salary=50000.0)
+        mech2 = Mechanics(name="Edit Mech 2", email="editm2@test.com", phone="700-700-7001", salary=52000.0)
+        db.session.add_all([mech1, mech2])
+        db.session.commit()
+
+        # Create a ticket for the existing customer
+        ticket = Service_Tickets(
+            VIN= f"EDITVIN-{mech1.email}",
+            service_date="2025.10.03",
+            service_desc="Edit test ticket",
+            customer_id=self.test_customer.id 
+        )
+        db.session.add(ticket)
+        db.session.commit()
+
+        # Assign mech1 initially
+        initial_rel = Service_Mechanics(ticket_id=ticket.id, mechanic_id=mech1.id)
+        db.session.add(initial_rel)
+        db.session.commit()
+
+        # Sanity check
+        rel_before = db.session.execute(
+            select(Service_Mechanics).where(
+                Service_Mechanics.ticket_id == ticket.id,
+                Service_Mechanics.mechanic_id == mech1.id
+            )
+        ).scalars().first()
+        self.assertIsNotNone(rel_before)
+
+        # Call the endpoints: remove mech1, add mech2
+        payload = {"remove_ids": [mech1.id], "add_ids": [mech2.id]}
+        resp = self.client.put(f'/service-tickets/{ticket.id}/edit', json=payload)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('message', resp.json)
+        self.assertIn('removed_mechanics', resp.json)
+        self.assertIn('added_mechanics',resp.json)
+        self.assertEqual(resp.json['removed_mechanics'], [mech1.id])
+        self.assertEqual(resp.json['added_mechanics'], [mech2.id])
+
+        # Verify DB
+        rel_after1 = db.session.execute(
+            select(Service_Mechanics).where(
+                Service_Mechanics.ticket_id == ticket.id,
+                Service_Mechanics.mechanic_id == mech1.id
+            )
+        ).scalars().first()
+        rel_after2 = db.session.execute(
+            select(Service_Mechanics).where(
+                Service_Mechanics.ticket_id == ticket.id,
+                Service_Mechanics.mechanic_id == mech2.id
+            )
+        ).scalars().first()
+
+        self.assertIsNone(rel_after1, "mechanic 1 should have been removed from the ticket")
+        self.assertIsNotNone(rel_after2, "mechanic 2 should have been added to the ticket")
+
+        # Cleanup
+        db.session.delete(rel_after2)
+        db.session.delete(ticket)
+        db.session.delete(ticket)
+        db.session.delete(mech1)
+        db.session.delete(mech2)
+        db.session.commit()
+
+    # Test add a part to a service ticket
+    def test_add_part(self):
+        # Create an inventory item
+        item = Inventory(name="Test Widget", price=19.99)
+        db.session.add(item)
+        db.session.commit()
+
+        # Create a ticket
+        testTicket = Service_Tickets(
+            VIN="PARTVIN-001",
+            service_date="2025-11-01",
+            service_desc="Part add test",
+            customer_id=self.test_customer.id
+        )
+        db.session.add(testTicket)
+        db.session.commit()
+
+        # Add part to ticket (quantity 2)
+        payload = {"inventory_id": item.id, "quantity": 2}
+        resp = self.client.post(f'/service-tickets/{testTicket.id}/add-part',
+                                data=json.dumps(payload),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = resp.json
+        self.assertIn("message", data)
+        self.assertEqual(data.get("part_name"), item.name)
+        self.assertEqual(data.get("quantity"), 2)
+        self.assertEqual(data.get("part_price"), item.price)
+
+        # Verify DB relationship
+        rel = db.session.execute(
+            select(Service_Inventory).where(
+                Service_Inventory.ticket_id == testTicket.id,
+                Service_Inventory.inventory_id == item.id
+            )
+        ).scalars().first()
+        self.assertIsNotNone(rel)
+        self.assertEqual(rel.quantity, 2)
+
+        # Post the same part, should increment to 5
+        resp2 = self.client.post(f'/service-tickets/{testTicket.id}/add-part',
+                                 data=json.dumps({"inventory_id": item.id, "quantity" : 3}),
+                                 content_type='application/json')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(resp2.json.get("part_name"), item.name)
+        self.assertEqual(resp2.json.get("quantity"), 3)
+
+        # Confirm DB updated total
+        rel_after = db.session.execute(
+            select(Service_Inventory).where(
+                Service_Inventory.ticket_id == testTicket.id,
+                Service_Inventory.inventory_id == item.id
+            )
+        ).scalars().first()
+        self.assertIsNotNone(rel_after)
+        self.assertEqual(rel_after.quantity, 5)
