@@ -121,5 +121,11 @@ class TestServiceTickets(unittest.TestCase):
         resp2 = self.client.put(f'/service-tickets/{ticket.id}/assign-mechanic/{mechanic.id}')
         self.assertEqual(resp2.status_code, 400)
 
-        # Test retrieve all service tickets
-        
+    # Test retrieve all service tickets
+    def get_all_tickets(self):
+        response = self.client.get('/service-tickets')
+        self.assertEqual(response.status_code, 200)
+        tickets = response.json
+        self.assertIsInstance(tickets, list)
+        self.assertGreaterEqual(len(tickets), 1)
+        self.assertEqual(tickets[0]['VIN'], "A8E7W8U2")
