@@ -3,9 +3,9 @@ info:
   title: "My API"
   description: "This is sample API documentation."
   version: "1.0.0"
-host: "127.0.0.1:5000"
+host: "mechanicshop-adaptive.onrender.com"
 schemas:
-  - "http"
+  - "https"
 consumes:
   - "application/json"
 produces:
