@@ -3,6 +3,7 @@ from Application.models import  db, Mechanics, Customers, Service_Mechanics, Ser
 from datetime import datetime
 from Application.utils.token_utils import encode_token
 import unittest, json, sys, os
+from sqlalchemy import select
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -85,4 +86,40 @@ class TestServiceTickets(unittest.TestCase):
         self.assertEqual(response_data['service_desc'], "Test ticket (from method)")
 
     # Test to add a relationship between a service ticket and a mechanic
-    
+    def test_mechanic_to_ticket(self):
+        # Create a customer (FK requirement)
+        customer = Customers(name="Assign Cust", email="assigncust@test.com", phone="101-202-3030", password="p@ssw0rd")
+        customer.set_password('p@ssw0rd')
+        db.session.add(customer)
+        db.session.commit()
+
+        # Create a mechanic
+        mechanic = Mechanics(name="Assign Mech", email="assignmech@test.com", phone="444-555-6666", salary=60000.0)
+        db.session.add(mechanic)
+        db.session.commit()
+
+        # Create a ticket for the customer (unique VIN)
+        ticket = Service_Tickets(VIN="ASSIGNVIN001", service_date="2025-10-03", service_desc="Assign Test", customer_id=customer.id)
+        db.session.add(ticket)
+        db.session.commit()
+
+        # Endpoint Call
+        resp = self.client.put(f'/service-tickets/{ticket.id}/assign-mechanic/{mechanic.id}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('message', resp.json)
+
+        # Verify relationship
+        rel = db.session.execute(
+            select(Service_Mechanics).where(
+                Service_Mechanics.ticket_id == ticket.id,
+                Service_Mechanics.mechanic_id == mechanic.id
+            )
+        ).scalars().first()
+        self.assertIsNotNone(rel)
+
+        # Handle reassignment of mechanic
+        resp2 = self.client.put(f'/service-tickets/{ticket.id}/assign-mechanic/{mechanic.id}')
+        self.assertEqual(resp2.status_code, 400)
+
+        # Test retrieve all service tickets
+        
