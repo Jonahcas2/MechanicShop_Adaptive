@@ -1,20 +1,20 @@
+
 from flask import Flask
-from .extensions import ma, limiter, cache
-from .models import db
-from .Blueprints.customers import customers_bp
-from .Blueprints.mechanics import mechanics_bp
-from .Blueprints.service_tickets import tickets_bp
-from .Blueprints.inventory import inventory_bp
+from Application.extensions import ma, limiter, cache
+from Application.models import db
+from Application.Blueprints.customers.routes import customers_bp
+from Application.Blueprints.mechanics.routes import mechanics_bp
+from Application.Blueprints.service_tickets.routes import tickets_bp
+from Application.Blueprints.inventory.routes import inventory_bp
 
 from flask_swagger_ui import get_swaggerui_blueprint
+
 SWAGGER_URL = '/api/docs'
 API_URL = '/static/swagger.yaml'
 
 swaggerui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL, API_URL, config={'app_name': "My API"}
 )
-
-
 
 def create_app(config_name):
     app = Flask(__name__)
