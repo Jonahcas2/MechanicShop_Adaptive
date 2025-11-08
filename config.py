@@ -10,5 +10,19 @@ class TestConfig:
     CACHE_TYPE = 'SimpleCache'
 
 class ProductionConfig:
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+    # Get the database URL from environment
+    database_url = os.environ.get('DATABASE_URL')
+    
+    # Render provides DATABASE_URL, but SQLAlchemy needs it in a specific format
+    # Also need to ensure SSL is required
+    if database_url and database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
+    # Add SSL requirement for PostgreSQL
+    SQLALCHEMY_DATABASE_URI = database_url
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {
+            "sslmode": "require"
+        }
+    }
     CACHE_TYPE = "SimpleCache"

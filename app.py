@@ -4,7 +4,7 @@ import os
 
 app = create_app('ProductionConfig')
 
-# Create table
+# Create tables
 with app.app_context():
     db.create_all()
 
